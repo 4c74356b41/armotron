@@ -1,0 +1,52 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmName": {
+            "type": "string"
+        },
+        "storageAccountName": {
+            "type": "string"
+        },
+        "numDataDisks": {
+            "type": "int",
+            "maxValue": 16,
+            "metadata": {
+                "description": "This parameter allows the user to select the number of disks they want"
+            }
+        }
+    },
+    "variables": {
+        "dynamicstorageAccountName": "[concat(uniquestring(resourceGroup().id), 'dynamicdisk')]",
+        "diskCaching": "ReadWrite",
+        "diskArray": [
+            {
+                "name": "[concat(parameters('vmName'), '-datadisk1')]",
+                "lun": 0,
+                "vhd": {
+                    "uri": "[concat('http://', variables('storageAccountName'),'.blob.core.windows.net/vhds/', parameters('vmName'), '-datadisk1.vhd')]"
+                },
+                "createOption": "Empty",
+                "caching": "[variables('diskCaching')]",
+                "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]"
+            },
+            {
+                "name": "[concat(parameters('vmName'), '-datadisk2')]",
+                "lun": 1,
+                "vhd": {
+                    "uri": "[concat('http://', variables('storageAccountName'),'.blob.core.windows.net/vhds/', parameters('vmName'), '-datadisk2.vhd')]"
+                },
+                "createOption": "Empty",
+                "caching": "[variables('diskCaching')]",
+                "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]"
+            }
+        ]
+    },
+    "resources": [],
+    "outputs": {
+        "result": {
+            "type": "array",
+            "value": "[take(variables('diskArray'),parameters('numDataDisks'))]"
+        }
+    }
+}
