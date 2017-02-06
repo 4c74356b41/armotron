@@ -202,44 +202,7 @@
                 },
                 "storageProfile": {
                     "imageReference": "[variables('imageReference')]",
-                    "dataDisks": [
-                        {
-                            "name": "datadisk1",
-                            "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]",
-                            "lun": 0,
-                            "vhd": {
-                                "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), variables('apiVersion')).primaryEndpoints.blob, variables('vmStorageAccountContainerName'),'/','myvm', copyIndex(),'dataDisk1.vhd')]"
-                            },
-                            "createOption": "Empty"
-                        },
-                        {
-                            "name": "datadisk2",
-                            "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]",
-                            "lun": 1,
-                            "vhd": {
-                                "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), variables('apiVersion')).primaryEndpoints.blob, variables('vmStorageAccountContainerName'),'/','myvm', copyIndex(),copyIndex(),'dataDisk2.vhd')]"
-                            },
-                            "createOption": "Empty"
-                        },
-                        {
-                            "name": "datadisk3",
-                            "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]",
-                            "lun": 2,
-                            "vhd": {
-                                "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), variables('apiVersion')).primaryEndpoints.blob, variables('vmStorageAccountContainerName'),'/','myvm', copyIndex(),copyIndex(),'dataDisk3.vhd')]"
-                            },
-                            "createOption": "Empty"
-                        },
-                        {
-                            "name": "datadisk4",
-                            "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]",
-                            "lun": 3,
-                            "vhd": {
-                                "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), variables('apiVersion')).primaryEndpoints.blob, variables('vmStorageAccountContainerName'),'/','myvm', copyIndex(),copyIndex(),'dataDisk4.vhd')]"
-                            },
-                            "createOption": "Empty"
-                        }
-                    ],
+                    "dataDisks": "[take(variables('diskArray'),parameters('numDataDisks'))]",
                     "osDisk": {
                         "name": "osdisk1",
                         "vhd": {
