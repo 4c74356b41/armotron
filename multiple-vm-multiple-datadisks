@@ -40,6 +40,13 @@
             "metadata": {
                 "description": "Data Disk Size"
             }
+        },
+        "numDataDisks": {
+            "type": "int",
+            "maxValue": 64,
+            "metadata": {
+                "description": "This parameter allows the user to select the number of disks they want"
+            }
         }
     },
     "variables": {
