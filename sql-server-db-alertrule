@@ -1,0 +1,188 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sendToServiceOwners": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Specifies if alerts are sent to service owners"
+            }
+        },
+        "windowSize": {
+            "type": "string",
+            "defaultValue": "PT5M",
+            "metadata": {
+                "description": "Period of time to monitor for"
+            }
+        },
+        "aggregation": {
+            "type": "string",
+            "defaultValue": "Average",
+            "allowedValues": [
+                "Average",
+                "Last",
+                "Maximum",
+                "Minimum",
+                "Total"
+            ],
+            "metadata": {
+                "description": "The way collected data should be compared"
+            }
+        },
+        "threshold": {
+            "type": "string",
+            "defaultValue": "80",
+            "metadata": {
+                "description": "The treshold value at which the alert will trigger"
+            }
+        },
+        "operator": {
+            "type": "string",
+            "defaultValue": "GreaterThan",
+            "allowedValues": [
+                "GreaterThan",
+                "GreaterThanOrEqual",
+                "LessThan",
+                "LessThanOrEqual"
+            ],
+            "metadata": {
+                "description": "Different sorts of operators for comparing the value"
+            }
+        },
+        "metricName": {
+            "type": "string",
+            "defaultValue": "cpu_percent",
+            "metadata": {
+                "description": "Name of the specific Metric"
+            }
+        },
+        "isEnabled": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Specifying if alert is enabled"
+            }
+        },
+        "alertDescription": {
+            "type": "string",
+            "defaultValue": "Alert used for Checking CPU for 80% Spikes"
+        },
+        "alertName": {
+            "type": "string",
+            "defaultValue": "cpu_percent"
+        },
+        "ugentecdbtestName": {
+            "type": "string",
+            "minLength": 1
+        },
+        "serverNameAdminLogin": {
+            "type": "string",
+            "minLength": 1,
+            "defaultValue": "*********"
+        },
+        "serverNameAdminLoginPassword": {
+            "defaultValue": "********",
+            "minLength": 1,
+            "type": "securestring"
+        },
+        "ugentecdbtestCollation": {
+            "type": "string",
+            "minLength": 1,
+            "defaultValue": "SQL_Latin1_General_CP1_CI_AS"
+        },
+        "ugentecdbtestEdition": {
+            "type": "string",
+            "defaultValue": "Basic",
+            "allowedValues": [
+                "Basic",
+                "Standard",
+                "Premium"
+            ]
+        },
+        "ugentecdbtestRequestedServiceObjectiveName": {
+            "type": "string",
+            "defaultValue": "Basic",
+            "allowedValues": [
+                "Basic",
+                "S0",
+                "S1",
+                "S2",
+                "P1",
+                "P2",
+                "P3"
+            ],
+            "metadata": {
+                "description": "Describes the performance level for Edition"
+            }
+        },
+        "serverName": {
+            "type": "string",
+            "defaultValue": "ugentecserver"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('serverName')]",
+            "type": "Microsoft.Sql/servers",
+            "location": "West Europe",
+            "apiVersion": "2014-04-01-preview",
+            "properties": {
+                "administratorLogin": "[parameters('serverNameAdminLogin')]",
+                "administratorLoginPassword": "[parameters('serverNameAdminLoginPassword')]",
+                "version": "12.0"
+            }
+        },
+        {
+            "name": "[concat(parameters('serverName'), '/', parameters('ugentecdbtestName'))]",
+            "type": "Microsoft.Sql/servers/databases",
+            "location": "westeurope",
+            "apiVersion": "2014-04-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', parameters('serverName'))]"
+            ],
+            "properties": {
+                "collation": "[parameters('ugentecdbtestCollation')]",
+                "edition": "[parameters('ugentecdbtestEdition')]",
+                "maxSizeBytes": "1073741824",
+                "requestedServiceObjectiveName": "[parameters('ugentecdbtestRequestedServiceObjectiveName')]"
+            }
+        },
+        {
+            "type": "Microsoft.Insights/alertrules",
+            "name": "[parameters('alertName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/databases', parameters('serverName'), parameters('ugentecdbtestName'))]"
+            ],
+            "location": "westeurope",
+            "apiVersion": "2016-03-01",
+            "properties": {
+                "name": "[parameters('alertName')]",
+                "isEnabled": "[parameters('isEnabled')]",
+                "condition": {
+                    "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+                    "dataSource": {
+                        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+                        "resourceUri": "[resourceId('Microsoft.Sql/servers/databases', parameters('serverName'), parameters('ugentecdbtestName'))]",
+                        "metricName": "[parameters('metricName')]"
+                    },
+                    "threshold": "[parameters('threshold')]",
+                    "windowSize": "[parameters('windowSize')]"
+                },
+                "actions": [
+                    {
+                        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+                        "sendToServiceOwners": "[parameters('sendToServiceOwners')]"
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "DbAdoConnString": {
+            "type": "string",
+            "value": "[concat('Server=tcp:',reference(parameters('serverName')).fullyQualifiedDomainName,',1433;Initial Catalog=',parameters('ugentecdbtestName'),';Persist Security Info=False;User ID=',reference(parameters('serverName')).administratorLogin,';Password=',reference(parameters('serverName')).administratorLoginPassword,';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]"
+        }
+    }
+}
