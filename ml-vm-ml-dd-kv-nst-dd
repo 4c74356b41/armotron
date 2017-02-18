@@ -1,0 +1,44 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "numDataDisks": {
+            "type": "int",
+            "maxValue": 16,
+            "metadata": {
+                "description": "This parameter allows the user to select the number of disks they want"
+            }
+        },
+        "sizeOfEachDataDiskInGB": {
+            "type": "string",
+            "defaultValue": "100",
+            "metadata": {
+                "description": "Data Disk Size"
+            }
+        }
+    },
+    "variables": {
+        "diskCaching": "ReadWrite",
+        "diskArray": [
+            {
+                "lun": 0,
+                "createOption": "Empty",
+                "caching": "[variables('diskCaching')]",
+                "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]"
+            },
+            {
+                "lun": 1,
+                "createOption": "Empty",
+                "caching": "[variables('diskCaching')]",
+                "diskSizeGB": "[parameters('sizeOfEachDataDiskInGB')]"
+            }
+        ]
+    },
+    "resources": [],
+    "outputs": {
+        "result": {
+            "type": "array",
+            "value": "[take(variables('diskArray'),parameters('numDataDisks'))]"
+        }
+    }
+}

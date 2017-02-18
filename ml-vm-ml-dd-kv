@@ -1,0 +1,120 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Admin username for VM"
+            }
+        },
+        "LoopCount": {
+            "type": "int",
+            "defaultValue": 2,
+            "minValue": 2,
+            "maxValue": 5,
+            "metadata": {
+                "description": "Number of VMs to deploy, limit 5 since this sample is using a single storage account"
+            }
+        },
+        "vmCount": {
+            "type": "array",
+            "defaultValue": [
+                2,
+                2
+            ]
+        },
+        "prefix": {
+            "type": "array",
+            "defaultValue": [
+                "windows-",
+                "ubuntu-"
+            ]
+        },
+        "numberOfDataDisksPerVM": {
+            "type": "array",
+            "metadata": {
+                "description": "Number of data disks to deploy for each VM"
+            },
+            "defaultValue": [
+                2,
+                2
+            ]
+        }
+    },
+    "variables": {
+        "storageAccountName": "[uniquestring(resourceGroup().id)]",
+        "osLoop": [
+            "Windows",
+            "Ubuntu",
+            "Windows"
+        ]
+    },
+    "resources": [
+        {
+            "name": "[concat('nested-', copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "copy": {
+                "name": "nestedCopy",
+                "count": "[parameters('LoopCount')]"
+            },
+            "dependsOn": [
+                "datadiskcopy"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/armotron/master/ml-vm-ml-dd-kv-nst",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "adminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "numberOfInstances": {
+                        "value": "[parameters('vmCount')[copyIndex()]]"
+                    },
+                    "prefix": {
+                        "value": "[parameters('prefix')[copyIndex()]]"
+                    },
+                    "OS": {
+                        "value": "[variables('osLoop')[copyIndex()]]"
+                    },
+                    "adminPassword": {
+                        "reference": {
+                            "keyVault": {
+                                "id": "/subscriptions/c6af39f7-0fce-432b-98cd-c34fe14e6a66/resourceGroups/testo/providers/Microsoft.KeyVault/vaults/vaulty"
+                            },
+                            "secretName": "[concat('secret', copyindex(1))]"
+                        }
+                    },
+                    "diskObject": {
+                        "value": "[reference(concat('nested-datadisk-', copyIndex())).outputs.result.value]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-09-01",
+            "name": "[concat('nested-datadisk-', copyIndex())]",
+            "type": "Microsoft.Resources/deployments",
+            "copy": {
+                "name": "datadiskcopy",
+                "count": "[parameters('LoopCount')]"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/armotron/master/ml-vm-ml-dd-kv-nst-dd",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "numDataDisks": {
+                        "value": "[parameters('numberOfDataDisksPerVM')[copyIndex()]]"
+                    }
+                }
+            }
+        }
+    ]
+}
