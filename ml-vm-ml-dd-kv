@@ -65,7 +65,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/4c74356b41/armotron/master/ml-vm-ml-dd-kv-nst",
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/armotron/master/ml-vm-ml-dd-kv-nst.json",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -106,7 +106,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "https://raw.githubusercontent.com/4c74356b41/armotron/master/ml-vm-ml-dd-kv-nst-dd",
+                    "uri": "https://raw.githubusercontent.com/4c74356b41/armotron/master/ml-vm-ml-dd-kv-nst-dd.json",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
