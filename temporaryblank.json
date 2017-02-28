@@ -1,0 +1,23 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "String"
+        },
+        "alert_webtest_name": {
+            "type": "String"
+        },
+        "insights_name": {
+            "type": "String"
+        },
+        "webtest_name": {
+            "type": "String"
+        },
+        "webapp_name": {
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": []
+}
