@@ -1,0 +1,92 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "metadata": {
+                "description": "Number of App Service Plan instances to deploy"
+            }
+        },
+        "lowCPU": {
+            "type": "String"
+        },
+        "highCPU": {
+            "type": "String"
+        },
+        "email": {
+            "type": "string",
+            "metadata": {
+                "description": "Where to email alerts"
+            }
+        }
+    },
+    "variables": {
+        "serverfarmName": "[concat('plan-', parameters('webAppName'))]",
+        "autoscalesettingsName": "[concat('autoScale-', parameters('webAppName'))]"
+    },
+    "resources": [
+        {
+            "type": "microsoft.insights/autoscalesettings",
+            "name": "[variables('autoscalesettingsName')]",
+            "apiVersion": "2014-04-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "profiles": [
+                    {
+                        "name": "[variables('autoscalesettingsName')]",
+                        "capacity": {
+                            "minimum": "1",
+                            "maximum": "5",
+                            "default": "2"
+                        },
+                        "rules": [
+                            {
+                                "metricTrigger": {
+                                    "metricName": "CpuPercentage",
+                                    "metricNamespace": "",
+                                    "metricResourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarmName'))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT10M",
+                                    "timeAggregation": "Average",
+                                    "operator": "GreaterThan",
+                                    "threshold": "[parameters('highCPU')]"
+                                },
+                                "scaleAction": {
+                                    "direction": "Increase",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT5M"
+                                }
+                            },
+                            {
+                                "metricTrigger": {
+                                    "metricName": "CpuPercentage",
+                                    "metricNamespace": "",
+                                    "metricResourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarmName'))]",
+                                    "timeGrain": "PT1M",
+                                    "statistic": "Average",
+                                    "timeWindow": "PT10M",
+                                    "timeAggregation": "Average",
+                                    "operator": "LessThan",
+                                    "threshold": "[parameters('lowCPU')]"
+                                },
+                                "scaleAction": {
+                                    "direction": "Decrease",
+                                    "type": "ChangeCount",
+                                    "value": "1",
+                                    "cooldown": "PT5M"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "enabled": true,
+                "name": "[variables('autoscalesettingsName')]",
+                "targetResourceUri": "[resourceId('Microsoft.Web/serverfarms', variables('serverfarmName'))]"
+            },
+            "resources": []
+        }
+    ]
+}

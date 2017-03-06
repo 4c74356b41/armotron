@@ -1,0 +1,71 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "metadata": {
+                "description": "Number of App Service Plan instances to deploy"
+            }
+        },
+        "lowCPU": {
+            "type": "String"
+        },
+        "highCPU": {
+            "type": "String"
+        },
+        "email": {
+            "type": "string",
+            "metadata": {
+                "description": "Where to email alerts"
+            }
+        }
+    },
+    "variables": {
+        "appInsights": "[concat('appInsights-', parameters('webAppName'))]",
+        "webTestName": "[concat('webtest-', parameters('webAppName'))]"
+    },
+    "resources": [
+        {
+            "type": "microsoft.insights/webtests",
+            "name": "[variables('webTestName')]",
+            "apiVersion": "2014-04-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "[concat('hidden-link:', resourceId('Microsoft.Insights/components/', variables('appInsights')))]": "Resource"
+            },
+            "properties": {
+                "SyntheticMonitorId": "[variables('webTestName')]",
+                "Name": "[variables('webTestName')]",
+                "Description": "",
+                "Enabled": true,
+                "Frequency": 300,
+                "Timeout": 120,
+                "Locations": [
+                    {
+                        "Id": "us-tx-sn1-azr"
+                    },
+                    {
+                        "Id": "us-il-ch1-azr"
+                    },
+                    {
+                        "Id": "us-ca-sjc-azr"
+                    },
+                    {
+                        "Id": "us-va-ash-azr"
+                    },
+                    {
+                        "Id": "us-fl-mia-edge"
+                    }
+                ],
+                "Configuration": {
+                    "WebTest": "[concat('<WebTest         Name=\"wegrwh\"         Id=\"7eb7392e-e01b-42c0-9cdd-0a82113067f6\"         Enabled=\"True\"         CssProjectStructure=\"\"         CssIteration=\"\"         Timeout=\"120\"         WorkItemIds=\"\"         xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\"         Description=\"\"         CredentialUserName=\"\"         CredentialPassword=\"\"         PreAuthenticate=\"True\"         Proxy=\"default\"         StopOnError=\"False\"         RecordedResultFile=\"\"         ResultsLocale=\"\">        <Items>        <Request         Method=\"GET\"         Guid=\"a10f5abf-1bda-fb33-8673-d609fed2b36d\"         Version=\"1.1\"         Url=\"http://', parameters('webAppName') ,'.azurewebsites.net\"         ThinkTime=\"0\"         Timeout=\"120\"         ParseDependentRequests=\"True\"         FollowRedirects=\"True\"         RecordResult=\"True\"         Cache=\"False\"         ResponseTimeGoal=\"0\"         Encoding=\"utf-8\"         ExpectedHttpStatusCode=\"200\"         ExpectedResponseUrl=\"\"         ReportingName=\"\"         IgnoreHttpStatusCode=\"False\" />        </Items>        </WebTest>')]"
+                },
+                "provisioningState": "Succeeded",
+                "kind": "ping"
+            },
+            "resources": [],
+            "dependsOn": []
+        }
+    ]
+}

@@ -1,0 +1,69 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the webApp to deploy"
+            }
+        },
+        "lowCPU": {
+            "type": "String",
+            "metadata": {
+                "description": "Name for alert for webTest"
+            },
+            "defaultValue": "None"
+        },
+        "highCPU": {
+            "type": "String",
+            "metadata": {
+                "description": "Name for alert for webTest"
+            },
+            "defaultValue": "None"
+        },
+        "email": {
+            "type": "string",
+            "metadata": {
+                "description": "Where to email alerts"
+            }
+        }
+    },
+    "variables": {
+        "metricAlertName": "[concat('metricAlert-', parameters('webAppName'))]"
+    },
+    "resources": [
+        {
+            "type": "microsoft.insights/alertrules",
+            "name": "[variables('metricAlertName')]",
+            "apiVersion": "2014-04-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "name": "[variables('metricAlertName')]",
+                "description": "",
+                "isEnabled": true,
+                "condition": {
+                    "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+                    "dataSource": {
+                        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+                        "resourceUri": "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]",
+                        "metricName": "CpuTime"
+                    },
+                    "threshold": "[parameters('highCPU')]",
+                    "windowSize": "PT5M"
+                },
+                "actions": [
+                    {
+                        "$type": "Microsoft.WindowsAzure.Management.Monitoring.Alerts.Models.RuleEmailAction, Microsoft.WindowsAzure.Management.Mon.Client",
+                        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+                        "sendToServiceOwners": true,
+                        "customEmails": [
+                            "[parameters('email')]"
+                        ]
+                    }
+                ]
+            },
+            "resources": []
+        }
+    ]
+}
