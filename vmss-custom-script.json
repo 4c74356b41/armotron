@@ -1,0 +1,355 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dnsNamePrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Unique DNS Name for the Public IP used to access the Virtual Machine."
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "user",
+            "metadata": {
+                "description": "Admin username on all VMs."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "pass",
+            "metadata": {
+                "description": "Admin password on all VMs."
+            }
+        },
+        "sshPublicKey": {
+            "type": "string",
+            "defaultValue": "key",
+            "metadata": {
+                "description": "SSH public key that will be included on all nodes. The OpenSSH public key can be generated with tools like ssh-keygen on Linux or OS X."
+            }
+        },
+        "masterCount": {
+            "type": "int",
+            "defaultValue": 3,
+            "allowedValues": [
+                1,
+                3,
+                5
+            ],
+            "metadata": {
+                "description": "The number of Swarm managers for the cluster."
+            }
+        },
+        "nodesCount": {
+            "type": "int",
+            "defaultValue": 3,
+            "metadata": {
+                "description": "The number of swarm nodes for the cluster.  This value can be from 1 to 100"
+            },
+            "minValue": 1,
+            "maxValue": 100
+        },
+        "diskSize": {
+            "type": "int",
+            "defaultValue": 100,
+            "metadata": {
+                "description": "Disk size to ba attached."
+            }
+        }
+    },
+    "variables": {
+        "masterCount": "[parameters('masterCount')]",
+        "nodesCount": "[parameters('nodesCount')]",
+        "vNetName": "[concat(resourceGroup().name,'-net')]",
+        "masterSubNetName": "[concat(resourceGroup().name,'-master-subnet')]",
+        "nodesSubNetName": "[concat(resourceGroup().name,'-nodes-subnet')]",
+        "addressPrefixMasters": "10.0.0.0/16",
+        "addressPrefixNodes": "192.168.0.0/16",
+        "subnetPrefixMasters": "10.0.0.0/24",
+        "subnetPrefixNodes": "192.168.0.0/24",
+        "masterNicName": "[concat(resourceGroup().name,'-master-nic')]",
+        "masterIPConfigName": "[concat(resourceGroup().name,'-master-ip')]",
+        "masterVMSSname": "[concat(resourceGroup().name,'-master-vmss')]",
+        "masterLBName": "[concat(resourceGroup().name,'-master-lb')]",
+        "masterLBID": "[resourceId('Microsoft.Network/loadBalancers',variables('masterLBName'))]",
+        "masterFEPoolName": "[concat(resourceGroup().name,'-master-fe-pool')]",
+        "masterFEPoolID": "[concat(variables('masterLBID'),'/frontendIPConfigurations/',variables('masterFEPoolName'))]",
+        "masterBEPoolName": "[concat(resourceGroup().name,'-master-be-pool')]",
+        "masterBEPoolID": "[concat(variables('masterLBID'),'/backendAddressPools/',variables('masterBEPoolName'))]",
+        "masterLBProbeName": "masterLBProbe",
+        "masterLBProbeID": "[concat(variables('masterLBID'),'/probes/',variables('masterLBProbeName'))]",
+        "masterNATPoolName": "[concat(resourceGroup().name,'-master-nat-pool')]",
+        "masterNSGname": "[concat(resourceGroup().name,'-nsg')]",
+        "nodesVMSSname": "[concat(resourceGroup().name,'-nodes-vmss')]",
+        "nodesLBName": "[concat(resourceGroup().name,'-nodes-lb')]",
+        "nodesIPConfigName": "[concat(resourceGroup().name,'-nodes-ip')]",
+        "nodesFEPoolName": "[concat(resourceGroup().name,'-nodes-fe-pool')]",
+        "nodesFEPoolID": "[concat(variables('nodesLBID'),'/frontendIPConfigurations/',variables('nodesFEPoolName'))]",
+        "nodesBEPoolName": "[concat(resourceGroup().name,'-nodes-be-pool')]",
+        "nodesBEPoolID": "[concat(variables('nodesLBID'),'/backendAddressPools/',variables('nodesBEPoolName'))]",
+        "nodesLBID": "[resourceId('Microsoft.Network/loadBalancers',variables('nodesLBName'))]",
+        "nodesLBProbeID": "[concat(variables('nodesLBID'),'/probes/',variables('nodesLBProbeName'))]",
+        "nodesLBProbeName": "nodesLBProbe",
+        "nodesNicName": "[concat(resourceGroup().name,'-nodes-nic')]",
+        "osType": {
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "16.04.0-LTS",
+            "version": "latest"
+        },
+        "imageReference": "[variables('osType')]",
+        "masterVM": "[concat('Microsoft.Compute/virtualMachineScaleSets/', variables('masterVMSSname'), '/virtualMachines/1/networkInterfaces/', variables('masterNicName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('vNetName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[variables('masterNSGname')]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefixMasters')]",
+                        "[variables('addressPrefixNodes')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('masterSubNetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefixMasters')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('MasterNSGname'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[variables('nodesSubNetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefixNodes')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('MasterNSGname')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "NSG - Remote Access"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowSSHAll",
+                        "properties": {
+                            "description": "Allow SSH",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "22",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('masterIPConfigName')]",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-09-01",
+            "properties": {
+                "publicIPAllocationMethod": "Static",
+                "dnsSettings": {
+                    "domainNameLabel": "[parameters('dnsNamePrefix')]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[variables('masterLBName')]",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-09-01",
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', variables('masterIPConfigName'))]"
+            ],
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "[variables('masterFEPoolName')]",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('masterIPConfigName'))]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[variables('masterBEPoolName')]"
+                    }
+                ],
+                "inboundNatPools": [
+                    {
+                        "name": "[variables('masterNATPoolName')]",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('masterFEPoolID')]"
+                            },
+                            "protocol": "tcp",
+                            "frontendPortRangeStart": 2200,
+                            "frontendPortRangeEnd": 2220,
+                            "backendPort": 22
+                        }
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "name": "weblb",
+                        "properties": {
+                            "frontendIPConfiguration": {
+                                "id": "[variables('masterFEPoolID')]"
+                            },
+                            "backendAddressPool": {
+                                "id": "[variables('masterBEPoolID')]"
+                            },
+                            "probe": {
+                                "id": "[variables('masterLBProbeID')]"
+                            },
+                            "protocol": "tcp",
+                            "frontendPort": 80,
+                            "backendPort": 80,
+                            "enableFloatingIP": false
+                        }
+                    }
+                ],
+                "probes": [
+                    {
+                        "name": "[variables('masterLBProbeName')]",
+                        "properties": {
+                            "protocol": "http",
+                            "port": 80,
+                            "intervalInSeconds": 15,
+                            "numberOfProbes": 5,
+                            "requestPath": "/"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "name": "[variables('masterVMSSname')]",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2016-04-30-preview",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', variables('vNetName'))]",
+                "[resourceId('Microsoft.Network/loadBalancers',variables('masterLBName'))]"
+            ],
+            "sku": {
+                "name": "Standard_A1",
+                "tier": "Standard",
+                "capacity": 1
+            },
+            "properties": {
+                "overprovision": "true",
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "storageProfile": {
+                        "osDisk": {
+                            "createOption": "FromImage"
+                        },
+                        "imageReference": "[variables('imageReference')]"
+                    },
+                    "osProfile": {
+                        "computerNamePrefix": "[uniqueString(resourceGroup().id)]",
+                        "adminUsername": "[parameters('adminUsername')]",
+                        "adminPassword": "[parameters('adminPassword')]",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": "false",
+                            "ssh": {
+                                "publicKeys": [
+                                    {
+                                        "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                                        "keyData": "[parameters('sshPublicKey')]"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "[variables('masterNicName')]",
+                                "properties": {
+                                    "primary": "true",
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "[variables('masterIPConfigName')]",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', variables('vNetName'), '/subnets/', variables('masterSubNetName'))]"
+                                                },
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[variables('masterBEPoolID')]"
+                                                    }
+                                                ],
+                                                "loadBalancerInboundNatPools": [
+                                                    {
+                                                        "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('masterLBName'), '/inboundNatPools/', variables('masterNATPoolName'))]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "name": "VMSSextension",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachineScaleSets/', variables('masterVMSSname'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "http://pastebin.com/raw/GsNTiAMc",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "value": {
+                        "value": "[variables('masterVMSSname')]"
+                    },
+                    "value2": {
+                        "value": "[reference(variables('masterVM'),'2016-09-01').ipConfigurations[0].properties.privateIPAddress]"
+                    }
+                }
+            }
+        }
+    ],
+    "outputs": {
+        "MasterFirstIPConfig": {
+            "type": "string",
+            "value": "[reference(variables('masterVM'),'2016-09-01').ipConfigurations[0].properties.privateIPAddress]"
+        }
+    }
+}

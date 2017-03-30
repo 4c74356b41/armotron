@@ -1,0 +1,45 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "LoopCount": {
+            "type": "int",
+            "defaultValue": 2,
+            "minValue": 2,
+            "maxValue": 11
+        }
+    },
+    "variables": {
+        "osLoop": [
+            "Windows",
+            "Ubuntu"
+        ]
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[toLower(concat(variables('osLoop')[mod(copyIndex(), 2)], copyIndex()))]",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "copy": {
+                "name": "whatever",
+                "count": "[parameters('LoopCount')]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/8"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "whatever",
+                        "properties": {
+                            "addressPrefix": "[concat('10.0.', copyIndex(), '.0/24')]"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
