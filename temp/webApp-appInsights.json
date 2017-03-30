@@ -1,0 +1,55 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "metadata": {
+                "description": "Number of App Service Plan instances to deploy"
+            }
+        },
+        "lowCPU": {
+            "type": "String"
+        },
+        "highCPU": {
+            "type": "String"
+        },
+        "email": {
+            "type": "string",
+            "metadata": {
+                "description": "Where to email alerts"
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/sites",
+            "name": "[parameters('webAppName')]",
+            "apiVersion": "2016-03-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "applicationInsightsInstrumentationKey": "[reference(resourceId('Microsoft.Insights/components', concat('AppInsights-', parameters('webAppName'))), '2014-04-01').InstrumentationKey]"
+            },
+            "dependsOn": [
+                "[concat('AppInsights-', parameters('webAppName'))]"
+            ]
+        },
+        {
+            "apiVersion": "2014-04-01",
+            "name": "[concat('AppInsights-', parameters('webAppName'))]",
+            "type": "Microsoft.Insights/components",
+            "kind": "web",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/' , parameters('webAppName'))]": "Resource"
+            },
+            "properties": {
+                "Application_Type": "Other (preview)",
+                "Flow_Type": "Redfield",
+                "Request_Source": "ARMAIExtension",
+                "Name": "[concat('AppInsights-', parameters('webAppName'))]",
+                "ApplicationId": "[concat('AppInsights-', parameters('webAppName'))]"
+            }
+        }
+    ]
+}
