@@ -1,1 +1,2 @@
 https://docs.microsoft.com/en-us/rest/api/recoveryservices/restores
+az network nic update -g {rg} -n {nic} --set dnsSettings.dnsServers=['10.0.0.12', '10.0.0.13']
