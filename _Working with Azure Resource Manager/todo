@@ -1,3 +1,14 @@
 https://blogs.msdn.microsoft.com/uk_faculty_connection/2017/05/18/azure-resource-manager-simply-allow-you-to-configure-and-implement-your-infrastructure-with-a-json-template/
 https://docs.microsoft.com/en-us/rest/api/recoveryservices/restores
+
 az network nic update -g {rg} -n {nic} --set dnsSettings.dnsServers=['10.0.0.12', '10.0.0.13']
+
+
+chaining
+copy parallel\seq
+copy properties
+old conditions
+conditions
+if statement
+
+

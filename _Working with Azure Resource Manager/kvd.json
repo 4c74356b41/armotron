@@ -93,7 +93,8 @@
             "properties": {
                 "value": "[parameters('secrets')[copyIndex()].secretValue]",
                 "attributes": {
-                    "enabled": false
+                    "enabled": true,
+                    "exp": "1492473600"
                 }
             },
             "dependsOn": [
