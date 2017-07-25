@@ -1,0 +1,69 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string"
+        },
+        "accountType": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-12-01",
+            "name": "[parameters('name')]",
+            "type": "Microsoft.ClassicStorage/StorageAccounts",
+            "location": "[parameters('location')]",
+            "properties": {
+                "accountType": "[parameters('accountType')]"
+            }
+        },
+        {
+            "type": "Microsoft.ClassicNetwork/virtualNetworks",
+            "name": "[parameters('classicVnet')]",
+            "apiVersion": "2015-06-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.50.0.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "dcSubnet",
+                        "addressPrefix": "10.50.0.0/24"
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-01",
+            "name": "rctyubiom",
+            "location": "[parameters('location')]",
+            "type": "Microsoft.ClassicCompute/domainNames"
+        },
+        {
+            "apiVersion": "2015-06-01",
+            "name": "[parameters('slotName')]",
+            "type": "Microsoft.ClassicCompute/domainNames/slots",
+            "dependsOn": [
+                "rctyubiom"
+            ],
+            "properties": {
+                "deploymentLabel": "[parameters('deploymentLabel')]",
+                "packageLink": {
+                    "Uri": "[parameters('packageLink')]"
+                },
+                "configurationLink": {
+                    "Uri": "[parameters('configurationLink')]"
+                },
+                "deploymentOptions": "[parameters('deploymentOptions')]"
+            }
+        }
+    ]
+}
