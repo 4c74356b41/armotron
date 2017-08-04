@@ -1,32 +1,22 @@
 {
     "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {
-        "name": {
-            "type": "string"
-        },
-        "accountType": {
-            "type": "string"
-        },
-        "location": {
-            "type": "string"
-        }
-    },
+    "parameters": {},
     "resources": [
         {
             "apiVersion": "2015-12-01",
-            "name": "[parameters('name')]",
+            "name": "storageName",
             "type": "Microsoft.ClassicStorage/StorageAccounts",
             "location": "[parameters('location')]",
             "properties": {
-                "accountType": "[parameters('accountType')]"
+                "accountType": "Standard_LRS"
             }
         },
         {
             "type": "Microsoft.ClassicNetwork/virtualNetworks",
-            "name": "[parameters('classicVnet')]",
+            "name": "networkName",
             "apiVersion": "2015-06-01",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -35,7 +25,7 @@
                 },
                 "subnets": [
                     {
-                        "name": "dcSubnet",
+                        "name": "subnetName",
                         "addressPrefix": "10.50.0.0/24"
                     }
                 ]
@@ -43,16 +33,16 @@
         },
         {
             "apiVersion": "2015-06-01",
-            "name": "rctyubiom",
-            "location": "[parameters('location')]",
+            "name": "cloudServiceName",
+            "location": "[resourceGroup().location]",
             "type": "Microsoft.ClassicCompute/domainNames"
         },
         {
             "apiVersion": "2015-06-01",
-            "name": "[parameters('slotName')]",
+            "name": "slotName",
             "type": "Microsoft.ClassicCompute/domainNames/slots",
             "dependsOn": [
-                "rctyubiom"
+                "cloudServiceName"
             ],
             "properties": {
                 "deploymentLabel": "[parameters('deploymentLabel')]",
@@ -63,6 +53,22 @@
                     "Uri": "[parameters('configurationLink')]"
                 },
                 "deploymentOptions": "[parameters('deploymentOptions')]"
+            }
+        },
+        {
+            "name": "[concat(cloudServiceName/SHA1-', 'certificate_Thumbprint')]",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.ClassicCompute/domainNames/serviceCertificates",
+            "apiVersion": "2015-06-01",
+            "dependsOn": [
+                "cloudServiceName"
+            ],
+            "properties": {
+                "thumbprintAlgorithm": "SHA1",
+                "thumbprint": "certificate_Thumbprint",
+                "data": "base64_encoded_certificate",
+                "certificateFormat": "pfx",
+                "password": "password"
             }
         }
     ]
