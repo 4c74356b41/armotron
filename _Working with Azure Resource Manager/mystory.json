@@ -1,0 +1,20 @@
+{
+  "type": "Microsoft.KeyVault/vaults/accessPolicies",
+  "name": "[concat(parameters('keyVaultSettings').name, '/add')]", <!-- notice the "/add" -->
+  "apiVersion": "2015-06-01",        
+  "properties": {
+      "mode": "Incremental", 
+      "accessPolicies": [
+        {
+          "tenantId": "[reference(concat(resourceId('Microsoft.Web/sites', parameters('webAppName')),'/providers/Microsoft.ManagedIdentity/Identities/default'), '2015-08-31-PREVIEW').tenantId]",
+          "objectId": "[reference(concat(resourceId('Microsoft.Web/sites', parameters('webAppName')),'/providers/Microsoft.ManagedIdentity/Identities/default'), '2015-08-31-PREVIEW').principalId]",
+          "permissions": {
+            "secrets": [
+              "get",
+              "list"
+            ]
+          }
+        }
+    ]
+  }
+}
